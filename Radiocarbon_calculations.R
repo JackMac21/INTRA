@@ -5,10 +5,6 @@
 #' @return A data.frame containing the dated calendar years BP (before present, "present" = 1950 CE) of the sample. Negative values indicate dates after 1950 CE.
 
 calendar_to_bp <- function(calendar) {
-  # Check for year zero as calendar year
-  if (calendar == 0) {
-    stop("Calendar year zero does not exist!")
-  }
   # Convert BCE/CE to BP while accounting for year zero problem
   bp <- ifelse(calendar < 0, 1949 - calendar, 1950 - calendar)
   return(data.frame(YearsBP = bp))
@@ -78,7 +74,7 @@ radAge_to_delta14C <- function(radAge, radAge_error, bp) {
   # Calculate decay correction factor for time elapsed since 1950
   decay_factor <- lambda_true * bp
   # Calculate Age-Corrected Delta 14C (per mil, ‰)
-  delta14C <- exp(decay_factor - (radAge * lambda_libby) - 1) * 1000
+  delta14C <- (exp(decay_factor - radAge * lambda_libby) - 1) * 1000
   # Propagate the error linearly
   delta14C_error <- 1000 * lambda_libby * exp((bp * lambda_true) - (radAge * lambda_libby)) * radAge_error
   return(data.frame(Delta14C = delta14C, Delta14C_error = delta14C_error))
@@ -116,7 +112,7 @@ fm_to_radAge <- function(fm, fm_error) {
   radAge <- -(lambda_libby) * log(fm)
   # Propagate the error linearly
   radAge_Error <- lambda_libby / fm * fm_error
-  return(data.frame(RadAge = radAge, RadAge_error = radAge_Error))
+  return(data.frame(RadAge = round(radAge, digits = 0), RadAge_error = round(radAge_Error, digits = 0)))
 }
 
 
