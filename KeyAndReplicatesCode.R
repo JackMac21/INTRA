@@ -4,7 +4,7 @@ library(validate)
 
 rm(list = ls())
 
-data <- read.csv("Test_data.csv", na.strings = "NaN")
+data <- read.csv("https://raw.githubusercontent.com/JackMac21/INTRA/refs/heads/main/full14Cdata.csv")
 
 data_temp <- data[ , -which (names(data) %in% c("Key", "Rep_No"))] #remove Key and Rep_No columns from repo
 
@@ -41,7 +41,7 @@ violating(data_temp, value_rules)
 
 # Create a column for named Replicate_No
 dataWithReps <- data_temp %>%
-  group_by(First_Author, Year_Pub, Tree_Series_ID, Dated_Year, EW_LW_WW) %>%
+  group_by(Tree_Series_ID, Dated_Year, EW_LW_WW) %>%
   mutate(Replicate_No = sprintf("rep_%02d", row_number())) %>%
   ungroup()
 
@@ -50,18 +50,14 @@ data_dups <- rbind(dataWithReps, dataWithReps[c(1:5), ])
 
 # Create a primary key using First_Author, Year_Pub, Tree_Series_ID, Dated_Year, WW, Replicate
 
-dataWithKey <- data_dups %>% mutate(PrimaryKey = paste0(
-  str_pad(str_sub(First_Author, 1, 14), 14, side = "right", pad = "Z"),
+dataWithKey <- dataWithReps %>% mutate(PrimaryKey = paste0(
+  str_pad(str_sub(Tree_Series_ID, 1, 12), 12, side = "right", pad = "@"),
   "_",
-  str_pad(str_sub(Year_Pub, -2, -1), 2, side = "right", pad = "Z"),
+  str_pad(str_sub(Dated_Year, 1, 8), 8, side = "right", pad = "@"),
   "_",
-  str_pad(str_sub(Tree_Series_ID, 1, 12), 12, side = "right", pad = "Z"),
+  str_pad(str_sub(EW_LW_WW, 1, 2), 2, side = "right", pad = "@"),
   "_",
-  str_pad(str_sub(Dated_Year, 1, 8), 8, side = "right", pad = "Z"),
-  "_",
-  str_pad(str_sub(EW_LW_WW, 1, 2), 2, side = "right", pad = "Z"),
-  "_",
-  str_pad(str_sub(Replicate_No, -2, -1), 2, side = "right", pad = "Z")
+  str_pad(str_sub(Replicate_No, -2, -1), 2, side = "right", pad = "@")
 )
 )
 

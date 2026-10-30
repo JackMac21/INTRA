@@ -32,7 +32,7 @@ fm_to_delta14c <- function(fm, fm_error, bp) {
   # True physical mean life of radiocarbon (based on 5730-year half-life)
   lambda_true <- 1 / 8267
   # Calculate decay correction factor for time elapsed since 1950
-  decay_factor <- exp(lambda_true * (-(bp)))
+  decay_factor <- exp(lambda_true * bp)
   # Calculate Age-Corrected Delta 14C (per mil, ‰)
   delta14C <- (fm * decay_factor - 1) * 1000
   # Propagate the error linearly
