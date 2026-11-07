@@ -1,7 +1,7 @@
 #read in data
 df <- read.csv("https://raw.githubusercontent.com/JackMac21/INTRA/refs/heads/main/full14Cdata.csv")
 
-# Track which values were calculated (applies to the value and its error)
+#new columns to track which values were calculated (applies to the value and its error)
 df$d14c_calculated <- FALSE
 df$fm_calculated   <- FALSE
 df$age_calculated  <- FALSE
@@ -22,7 +22,10 @@ for (i in seq_len(nrow(df))) {
   has_age  <- grepl(str_14cage,  reported)
   
   #skip unrecognized rows, or rows where all three were reported
-  if (!(has_d14c || has_fm || has_age)) next
+  if (!(has_d14c || has_fm || has_age)) {
+    message(sprintf("Error: unable to perform calculations for row %d (no D14C, Fm, or 14C Age found)", i))
+    next
+  }
   if (has_d14c && has_fm && has_age) next
   
   #d14c not reported: calculate value and error from fmodern, else age
@@ -63,4 +66,4 @@ for (i in seq_len(nrow(df))) {
 }
 
 #replace with intended output path
-write.csv(df, "C:/Users/jackm/Downloads/INTRAWithCalculations.csv")
+write.csv(df, "C:/Users/jackm/Downloads/INTRAWithCalculations2.csv")
