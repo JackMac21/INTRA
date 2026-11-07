@@ -29,6 +29,8 @@ bp_to_calendar <- function(bp) {
 #' @return A data.frame containing the calculated Delta14C and its associated error.
 
 fm_to_delta14c <- function(fm, fm_error, bp) {
+  # Handle decimal bp values
+  bp <- ceiling(bp)
   # True physical mean life of radiocarbon (based on 5730-year half-life)
   lambda_true <- 1 / 8267
   # Calculate decay correction factor for time elapsed since 1950
@@ -48,6 +50,8 @@ fm_to_delta14c <- function(fm, fm_error, bp) {
 #' @return A data.frame containing the calculated Fm and its associated error.
 
 delta14c_to_fm <- function(delta14C, delta14C_error, bp) {
+  # Handle decimal bp values
+  bp <- ceiling(bp)
   # True physical mean life of radiocarbon (based on 5730-year half-life)
   lambda_true <- 1 / 8267
   # Calculate decay correction factor for time elapsed since 1950
@@ -67,6 +71,8 @@ delta14c_to_fm <- function(delta14C, delta14C_error, bp) {
 #' @return A data.frame containing the calculated Delta14C and its associated error.
 
 radAge_to_delta14C <- function(radAge, radAge_error, bp) {
+  # Handle decimal bp values
+  bp <- ceiling(bp)
   # True physical mean life of radiocarbon (based on 5730-year half-life)
   lambda_true <- 1 / 8267
   # Libby mean life of radiocarbon (based on 5568-year half-life)
@@ -88,6 +94,8 @@ radAge_to_delta14C <- function(radAge, radAge_error, bp) {
 #' @return A data.frame containing the calculated 14C Age and its associated error. Note that 14C ages and errors are rounded due to convention.
 
 delta14C_to_radAge <- function(delta14C, delta14C_error, bp) {
+  # Handle decimal bp values
+  bp <- ceiling(bp)
   # True physical mean life of radiocarbon (based on 5730-year half-life)
   lambda_true <- 1 / 8267
   # Libby mean life of radiocarbon (based on 5568-year half-life)
