@@ -1,6 +1,8 @@
 #read in data
 df <- read.csv("https://raw.githubusercontent.com/JackMac21/INTRA/refs/heads/main/full14Cdata.csv")
 
+source(Radiocarbon_calculations.R) #does this need to be sourced?
+
 #new columns to track which values were calculated (applies to the value and its error)
 df$d14c_calculated <- FALSE
 df$fm_calculated   <- FALSE
