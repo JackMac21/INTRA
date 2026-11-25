@@ -1,4 +1,3 @@
-# Test
 library(shiny)
 library(DT)
 library(leaflet)
@@ -37,8 +36,47 @@ data_raw <- data_raw %>%
     Longitude = suppressWarnings(as.numeric(Longitude))
   )
 
+drive_url    <- "https://drive.google.com/file/d/1mgqNZ7cV5i1r6iElCMk9hFer98NfSAjX/view?usp=sharing"
+
+last_updated <- local({
+  mt <- file.mtime("app.R")
+  mt <- mt[!is.na(mt)]
+  if (length(mt) == 0) "Not available" else format(max(mt), "%B %d, %Y")
+})
+
+n_rows <- format(nrow(data_raw), big.mark = ",")
+
+format_year <- function(y) {
+  ifelse(is.na(y), NA_character_,
+         ifelse(y < 0, paste(abs(y), "BCE"), paste(y, "CE")))
+}
+
 ui <- fluidPage(
-  titlePanel("Annual Δ14C in Tree Rings"),
+  titlePanel("INTRA: International Tree-ring Radiocarbon Archive"),
+  
+  fluidRow(
+    column(
+      width = 12,
+      wellPanel(
+        h3("Information"),
+        p("This repository contains ", strong(n_rows), " (sub)annual tree ring radiocarbon (", tags$sup("14"), "C) measurements spanning the past ~14000 years. Dated tree ring ", tags$sup("14"), "C measurements reflect atmospheric ", tags$sup("14"), "C, which is a proxy for past solar activity and extreme SEP events, like Miyake Events. In the modern day, Miyake Events could cause damage to telecommunications and the power grid, as well as cause radiation sickness at high altitudes. An inclusive, machine-readable, and stable repository of ", tags$sup("14"), "C measurements is necessary to conduct variability studies and disentangle patterns of ", tags$sup("14"), "C production and sequestration in order to build resilience to these events."),
+        p(strong("Publication: "), "MacMillan, J. et al. In prep. An Open-Source Repository for Research on Tree Ring ", tags$sup("14"), "C: International Tree Ring Radiocarbon Archive (INTRA)")
+      )
+    )
+  ),
+  
+  fluidRow(
+    column(
+      width = 12,
+      wellPanel(
+        h3("How to Use"),
+        p("1. Apply desired filters to data."),
+        p("2. Observe changes to plot, map, and table."),
+        p("3. Download resulting subset using the Download Filtered Data (CSV) button."),
+        p("4. Submit your own data for review and addition to INTRA using the Upload Data button.")
+      )
+    )
+  ),
   
   fluidRow(
     column(
@@ -86,16 +124,28 @@ ui <- fluidPage(
         actionButton("reset_filters", "Reset Filters", 
                      class = "btn-sm", style = "width: 100%; margin-bottom: 10px;"),
         downloadButton("download_data", "Download Filtered Data (CSV)", 
-                       class = "btn-sm", style = "width: 100%;")
+                       class = "btn-sm", style = "width: 100%;"),
+        # REPLACE WITH URL TO GOOGLE FORM HERE
+        tags$a(
+          href = "https://google.com", 
+          target = "_blank",
+          rel = "noopener",
+          class = "btn btn-default btn-sm",
+          style = "width: 100%; margin-top: 10px;",
+          icon("upload"), " Upload Data"
+        )
       )
     ),
     column(
+      h3(HTML("&Delta;<sup>14</sup>C of Individual Tree Ring Samples"), style = "text-align: center;"),
       width = 8,
       plotOutput("year_plot", height = 400)
     )
   ),
   
-  br(),
+  fluidRow(
+    h3("Tree Ring Sampling Locations", style = "text-align: center;")
+  ),
   
   fluidRow(
     column(
@@ -105,7 +155,13 @@ ui <- fluidPage(
     )
   ),
   
-  br(),
+  fluidRow(
+    p(HTML("Each point on the map respresents one tree ('Tree Series') that was measured for <sup>14</sup>C. Multiple measurements may be derived from the same tree, and multiple trees may be present at the same site/coordinates."), style = "text-align: center;")
+  ),
+  
+  fluidRow(
+    h3(HTML("Data Table of <sup>14</sup>C Measurements"), style = "text-align: center;")
+  ),
   
   fluidRow(
     column(
@@ -113,7 +169,38 @@ ui <- fluidPage(
       div(style = "padding: 0px 20px;",
           DTOutput("table"))
     )
-  )
+  ),
+  
+  fluidRow(
+    column(
+      width = 12,
+      tags$a(
+        href = drive_url,
+        target = "_blank",
+        class = "btn btn-primary btn-lg",
+        style = "display: block; width: 100%; margin-bottom: 15px;",
+        icon("file-alt"), " Attribute Description File"
+      )
+    )
+  ),
+  
+  fluidRow(
+    column(
+      width = 12,
+      wellPanel(
+        h3("Credits"),
+        p(strong("Authors: "), "Jack MacMillan", tags$sup("1"), ", Meagan Walker", tags$sup("1"), ", Sophie von Fromm", tags$sup("3"), ", Lankeswar Dey", tags$sup("2"), ", Rachael Filwett", tags$sup("3"), ", Mariah Carbone", tags$sup("4"), ", Arch Robison", tags$sup("3"), ", Miles Case", tags$sup("1"), ", Martina Jarek", tags$sup("1"), ", Gillian Snyder", tags$sup("1"), ", Amy Hessl", tags$sup("1")),
+        p(strong("Institutions: ")), 
+        p(tags$sup("1"), "Department of Geology and Geography, West Virginia University, Morgantown, WV, 26505, United States"),
+        p(tags$sup("2"), "FORTH Institute of Astrophysics, Heraklion, Greece"),
+        p(tags$sup("3"), "Department of Physics, Montana State University, Bozeman, MT, 59717, United States"),
+        p(tags$sup("4"), "Center for Ecosystem Science and Society, Northern Arizona University, Flagstaff, AZ, 86011, United States"),
+        p(strong("Contact: "), "Jack MacMillan, jtm00036@mix.wvu.edu"),
+        p(strong("Funding: "), "NSF Solar Terrestrial #2411569, NSF Graduate Research Fellowship to M. Walker #2136524"),
+        p(strong("Last updated: "), last_updated)
+      )
+    )
+  ),
 )
 
 server <- function(input, output, session) {
@@ -219,12 +306,25 @@ server <- function(input, output, session) {
   })
   
   output$table <- renderDT({
-    df <- filtered_data()
+    df <- filtered_data() %>% select(!Tech.1 & !Tech.2 & !Year.0.Check & !Cellulose.Type.Check)
     if (nrow(df) == 0) {
       datatable(data.frame(Message = "No records match the filter criteria."), options = list(dom = 't'))
     } else {
+      # Turn DOI text into clickable links
+      doi_clean <- trimws(as.character(df$Source))
+      doi_url <- ifelse(grepl("^https?://", doi_clean),
+                        doi_clean,
+                        paste0("https://doi.org/", doi_clean))
+      df$DOI <- ifelse(
+        is.na(doi_clean) | doi_clean == "",
+        "",
+        sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', doi_url, doi_clean)
+      )
+      
       datatable(
         df,
+        style = "bootstrap4",
+        escape = setdiff(names(df), "DOI"),   # render DOI as HTML, escape everything else
         options = list(
           scrollX = TRUE,
           autoWidth = TRUE,
@@ -235,24 +335,75 @@ server <- function(input, output, session) {
     }
   })
   
-  output$map <- renderLeaflet({
-    df <- filtered_data()
-    df <- df[!is.na(df$Latitude) & !is.na(df$Longitude), ]
+  #output$map <- renderLeaflet({
+    #df <- filtered_data()
+    #df <- df[!is.na(df$Latitude) & !is.na(df$Longitude), ]
     
-    if (nrow(df) == 0) {
+    #if (nrow(df) == 0) {
+    #  return(leaflet() %>% addTiles() %>% addPopups(0, 0, "No data to display"))
+    #}
+    
+    #leaflet(df) %>%
+      #addTiles() %>%
+      #addMarkers(~Longitude, ~Latitude, clusterOptions = markerClusterOptions(),
+                 #popup = ~paste(
+                   #"<strong>Tree Series ID:</strong>", Tree_Series_ID, "<br/>",
+                   #"<strong>Species:</strong>", Species, "<br/>",
+                   #"<strong>Author/Year:</strong>", Author_Year, "<br/>",
+                   #"<strong>Dated Year:</strong>", Dated_Year
+                # ))
+ # })
+  
+  
+  output$map <- renderLeaflet({
+    series <- filtered_data() %>%
+      filter(!is.na(Latitude), !is.na(Longitude), !is.na(Tree_Series_ID)) %>%
+      group_by(Tree_Series_ID) %>%
+      summarise(
+        Genus = first(Genus),
+        Species = first(Species),
+        Latitude = mean(Latitude),
+        Longitude = mean(Longitude),
+        Year_Min = suppressWarnings(min(Dated_Year, na.rm = TRUE)),
+        Year_Max = suppressWarnings(max(Dated_Year, na.rm = TRUE)),
+        N_Samples = n(),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        Years = case_when(
+          !is.finite(Year_Min)  ~ "Not available",
+          Year_Min == Year_Max  ~ format_year(Year_Min),
+          TRUE                  ~ paste(format_year(Year_Min), "-", format_year(Year_Max))
+        )
+      )
+    
+    if (nrow(series) == 0) {
       return(leaflet() %>% addTiles() %>% addPopups(0, 0, "No data to display"))
     }
     
-    leaflet(df) %>%
+    tree_icon <- makeAwesomeIcon(
+      icon = "tree",
+      library = "fa",
+      markerColor = "darkblue",
+      iconColor = "white"
+    )
+    
+    leaflet(series) %>%
       addTiles() %>%
-      addMarkers(~Longitude, ~Latitude, clusterOptions = markerClusterOptions(),
-                 popup = ~paste(
-                   "<strong>Tree Series ID:</strong>", Tree_Series_ID, "<br/>",
-                   "<strong>Species:</strong>", Species, "<br/>",
-                   "<strong>Author/Year:</strong>", Author_Year, "<br/>",
-                   "<strong>Dated Year:</strong>", Dated_Year
-                 ))
+      addAwesomeMarkers(
+        ~Longitude, ~Latitude,
+        icon = tree_icon,
+        clusterOptions = markerClusterOptions(),
+        label = ~Tree_Series_ID,
+        popup = ~paste0(
+          "<strong>Tree Series ID:</strong> ", Tree_Series_ID, "<br/>",
+          "<strong>Genus/Species:</strong> ", Genus, " ", Species, "<br/>",
+          "<strong>Dated Year Range:</strong> ", Years, "<br/>",
+          "<strong># of Samples:</strong> ", N_Samples
+        )
+      )
   })
+  
   
   output$year_plot <- renderPlot({
     df <- filtered_data() %>%
@@ -283,11 +434,10 @@ server <- function(input, output, session) {
     
     p <- ggplot(df, aes(x = Jittered_Year, y = Age_Corrected_D14C)) +
       geom_point(alpha = 0.6, color = "darkblue", size = 2) +
-      theme_minimal() +
+      theme_minimal(base_size = 20) +
       labs(
         x = "Dated Year (jittered)",
-        y = "Age Corrected Δ14C (‰)",
-        title = "Δ14C of Individual Tree Ring Samples"
+        y = expression("Age Corrected " * Δ^14 * "C (‰)")
       )
     
     if (isTRUE(input$show_errors)) {
