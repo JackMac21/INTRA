@@ -5,7 +5,7 @@ library(ggplot2)
 library(dplyr)
 library(rsconnect)
 
-data_raw <- read.csv("Annual_14C_Repository_V5.csv", stringsAsFactors = FALSE)
+data_raw <- read.csv("Annual_14C_Repository_V6.csv", stringsAsFactors = FALSE)
 Intcal20Curve <- read.csv("Intcal20Curve2.csv", stringsAsFactors = FALSE)
 SHcal20Curve <- read.csv("SHcal20Curve.csv", stringsAsFactors = FALSE)
 
@@ -35,8 +35,6 @@ data_raw <- data_raw %>%
     Latitude = suppressWarnings(as.numeric(Latitude)),
     Longitude = suppressWarnings(as.numeric(Longitude))
   )
-
-drive_url    <- "https://drive.google.com/file/d/1mgqNZ7cV5i1r6iElCMk9hFer98NfSAjX/view?usp=sharing"
 
 last_updated <- local({
   mt <- file.mtime("app.R")
@@ -175,7 +173,7 @@ ui <- fluidPage(
     column(
       width = 12,
       tags$a(
-        href = drive_url,
+        href = "https://drive.google.com/file/d/1mgqNZ7cV5i1r6iElCMk9hFer98NfSAjX/view?usp=sharing",
         target = "_blank",
         class = "btn btn-primary btn-lg",
         style = "display: block; width: 100%; margin-bottom: 15px;",
@@ -306,54 +304,28 @@ server <- function(input, output, session) {
   })
   
   output$table <- renderDT({
-    df <- filtered_data() %>% select(!Tech.1 & !Tech.2 & !Year.0.Check & !Cellulose.Type.Check)
+    df <- filtered_data() %>% select(!Key & !Tech.1 & !Tech.2 & !Year.0.Check & !Cellulose.Type.Check)
     if (nrow(df) == 0) {
-      datatable(data.frame(Message = "No records match the filter criteria."), options = list(dom = 't'))
-    } else {
-      # Turn DOI text into clickable links
-      doi_clean <- trimws(as.character(df$Source))
-      doi_url <- ifelse(grepl("^https?://", doi_clean),
-                        doi_clean,
-                        paste0("https://doi.org/", doi_clean))
-      df$DOI <- ifelse(
-        is.na(doi_clean) | doi_clean == "",
-        "",
-        sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', doi_url, doi_clean)
-      )
-      
-      datatable(
-        df,
-        style = "bootstrap4",
-        escape = setdiff(names(df), "DOI"),   # render DOI as HTML, escape everything else
-        options = list(
-          scrollX = TRUE,
-          autoWidth = TRUE,
-          pageLength = 10
-        ),
-        class = 'display nowrap'
-      )
+      return(datatable(data.frame(Message = "No records match the filter criteria."),
+                       options = list(dom = 't')))
     }
+    
+    src <- as.character(df$Source)
+    has_link <- !is.na(src) & trimws(src) != ""
+    
+    df$Source <- ifelse(
+      has_link,
+      sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', trimws(src), htmltools::htmlEscape(src)),
+      ""
+    )
+    
+    datatable(
+      df,
+      escape = setdiff(names(df), "Source"),
+      options = list(scrollX = TRUE, autoWidth = TRUE, pageLength = 10),
+      class = 'display nowrap'
+    )
   })
-  
-  #output$map <- renderLeaflet({
-    #df <- filtered_data()
-    #df <- df[!is.na(df$Latitude) & !is.na(df$Longitude), ]
-    
-    #if (nrow(df) == 0) {
-    #  return(leaflet() %>% addTiles() %>% addPopups(0, 0, "No data to display"))
-    #}
-    
-    #leaflet(df) %>%
-      #addTiles() %>%
-      #addMarkers(~Longitude, ~Latitude, clusterOptions = markerClusterOptions(),
-                 #popup = ~paste(
-                   #"<strong>Tree Series ID:</strong>", Tree_Series_ID, "<br/>",
-                   #"<strong>Species:</strong>", Species, "<br/>",
-                   #"<strong>Author/Year:</strong>", Author_Year, "<br/>",
-                   #"<strong>Dated Year:</strong>", Dated_Year
-                # ))
- # })
-  
   
   output$map <- renderLeaflet({
     series <- filtered_data() %>%
@@ -388,8 +360,9 @@ server <- function(input, output, session) {
       iconColor = "white"
     )
     
-    leaflet(series) %>%
-      addTiles() %>%
+    leaflet(series, options = leafletOptions(minZoom = 1.4)) %>%
+      addTiles(options = tileOptions(noWrap = TRUE)) %>%
+      setMaxBounds(lng1 = -200, lat1 = -80, lng2 = 200, lat2 = 80) %>%
       addAwesomeMarkers(
         ~Longitude, ~Latitude,
         icon = tree_icon,
@@ -403,7 +376,6 @@ server <- function(input, output, session) {
         )
       )
   })
-  
   
   output$year_plot <- renderPlot({
     df <- filtered_data() %>%
